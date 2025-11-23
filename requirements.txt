@@ -6,6 +6,8 @@ helium == 3.0.5
 
 requests == 2.21.0
 
+schedule == 1.2.0
+
 validators == 0.18.1
 
 html5lib == 1.1
