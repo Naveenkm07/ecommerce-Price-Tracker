@@ -73,11 +73,27 @@ def _parse_price_text(price_text: str) -> float:
     Raises:
         ScraperError: If no digits can be found in the text.
     """
-
-    cleaned = re.sub(r"[^0-9.]", "", price_text)
-    if not cleaned:
+    # Find numeric-like sequences such as "1,234.56" or "1234" in the text.
+    # This avoids picking up the dot from a token like "Rs." which led to
+    # values like ".1234.00" after naive stripping.
+    candidates = re.findall(r"\d[\d,.]*", price_text)
+    if not candidates:
         raise ScraperError(f"Could not parse price from text: {price_text!r}")
-    return float(cleaned)
+
+    # Prefer the longest candidate (most complete number on the line)
+    token = max(candidates, key=len)
+    # Remove thousands separators
+    token = token.replace(",", "")
+    # Normalize multiple dots to a single decimal point
+    if token.count(".") > 1:
+        head, tail = token.split(".", 1)
+        tail = tail.replace(".", "")
+        token = head + "." + tail
+
+    try:
+        return float(token)
+    except ValueError as exc:
+        raise ScraperError(f"Could not parse price from text: {price_text!r}") from exc
 
 
 def _parse_amazon_product(soup: BeautifulSoup) -> Tuple[str, float]:
